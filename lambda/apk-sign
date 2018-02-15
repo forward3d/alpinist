@@ -1,0 +1,16 @@
+#!/bin/bash
+
+cd /tmp
+
+sig=".SIGN.RSA.$3"
+openssl dgst -sha1 -sign "$4" -out "$sig" $1
+
+tmptargz=$(mktemp)
+tmpsigned=$(mktemp)
+
+tar -f - -c "$sig" | /var/task/abuild-tar --cut | gzip -9 > "$tmptargz"
+cat "$tmptargz" $1 > "$tmpsigned"
+
+rm -f "$tmptargz" "$sig" "$4"
+chmod 644 "$tmpsigned"
+mv "$tmpsigned" $2

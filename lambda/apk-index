@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./apk index -q --force-binary-stdout $1 --rewrite-arch $2 | tar -xOzf - APKINDEX | cat

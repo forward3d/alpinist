@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Alpine Package Repository
+
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+  ApkS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+
+  ApkS3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref ApkS3Bucket
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - "s3:GetObject"
+            Effect: "Allow"
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/*'
+            Principal: "*"
+
+  ApkIndexFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Sid: "AllowLambdaServiceToAssumeRole"
+            Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        -
+          PolicyName: 'S3GetPutListObjectsForApk'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/*'
+        -
+          PolicyName: 'SSMParamForApk'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              -
+                Effect: Allow
+                Action: 'ssm:GetParameter*'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/apk/*'
+
+  ApkIndexFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "apk-repository-${BucketName}"
+      Handler: index.handler
+      Runtime: python3.6
+      CodeUri: ./lambda
+      Timeout: 30
+      Role: !GetAtt ApkIndexFunctionRole.Arn
+      Events:
+        S3FileListener:
+          Type: S3
+          Properties:
+            Bucket: !Ref ApkS3Bucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: '.apk'
