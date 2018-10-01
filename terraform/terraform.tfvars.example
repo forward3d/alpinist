@@ -1,0 +1,5 @@
+namespace="cp"
+stage="staging"
+name="apk"
+region="us-west-2"
+s3_bucket_name="apk.example.com"

@@ -5,6 +5,8 @@ Description: Alpine Package Repository
 Parameters:
   BucketName:
     Type: String
+  FunctionName:
+    Type: String
 
 Resources:
   ApkS3Bucket:
@@ -69,7 +71,7 @@ Resources:
   ApkIndexFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub "apk-repository-${BucketName}"
+      FunctionName: !Sub "apk-repository-${FunctionName}"
       Handler: index.handler
       Runtime: python3.6
       CodeUri: ./lambda

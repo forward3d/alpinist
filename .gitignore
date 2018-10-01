@@ -1,2 +1,4 @@
+*.rsa*
 serverless-output.yaml
 deploy
+.terraform

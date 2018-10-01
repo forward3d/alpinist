@@ -1,5 +1,7 @@
 FROM amazonlinux:latest
 
+ENV CFLAGS="-Wno-error"
+
 RUN yum clean all -y
 RUN yum install -y git make glibc-devel gcc patch openssl-devel lua-devel
 RUN git clone https://github.com/alpinelinux/abuild.git
