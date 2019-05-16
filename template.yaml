@@ -73,7 +73,7 @@ Resources:
       Handler: index.handler
       Runtime: python3.7
       CodeUri: ./lambda
-      Timeout: 30
+      Timeout: 90
       Role: !GetAtt ApkIndexFunctionRole.Arn
       Events:
         S3FileListener:
