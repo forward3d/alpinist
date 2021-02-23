@@ -9,3 +9,12 @@ RUN LUA_VERSION=5.1 LUA_PC=lua make
 
 WORKDIR /abuild
 RUN make abuild-tar
+
+WORKDIR /output
+COPY apk-index .
+COPY apk-sign .
+RUN cp /apk-tools/src/apk . \
+ && cp /abuild/abuild-tar . \
+ && chmod +x * \
+ && pwd && ls -lh
+

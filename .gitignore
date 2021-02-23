@@ -1,2 +1,17 @@
+# Serverless & AWS SAM
 serverless-output.yaml
 deploy
+.aws-sam/
+
+# Python
+**/*.pyc
+**/__pycache__/
+dependencies/
+
+# General
+**/.DS_Store
+**/*.swp
+
+# Configuration File
+config.env
+
