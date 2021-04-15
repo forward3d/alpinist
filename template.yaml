@@ -5,84 +5,82 @@ Description: Alpine Package Repository
 Parameters:
   BucketName:
     Type: String
+  LambdaRuntime:
+    Type: String
+    Default: python3.7
+  LambdaTimeout:
+    Type: String
+    Default: 90
 
 Resources:
   ApkS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref BucketName
+      AccessControl: PublicRead
 
   ApkS3BucketPolicy:
-    Type: "AWS::S3::BucketPolicy"
+    Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref ApkS3Bucket
       PolicyDocument:
         Statement:
-          -
-            Action:
-              - "s3:GetObject"
-            Effect: "Allow"
+          - Action: 's3:GetObject'
+            Effect: 'Allow'
             Resource: !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/*'
-            Principal: "*"
+            Principal: '*'
 
-  ApkIndexFunctionRole:
-    Type: AWS::IAM::Role
+  ApkIndexFunctionDependencies:
+    Type: AWS::Serverless::LayerVersion
     Properties:
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-      AssumeRolePolicyDocument:
+      LayerName: !Sub 'apk-repository-${BucketName}-deps'
+      Description: !Sub 'Dependencies for function apk-repository-${BucketName}'
+      ContentUri: dependencies/
+      CompatibleRuntimes:
+        - !Ref LambdaRuntime
+      LicenseInfo: 'MIT'
+      RetentionPolicy: 'Delete'
+
+  ApkIndexFunctionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${AWS::StackName}-Lambda-apk-repository'
+      PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          -
-            Sid: "AllowLambdaServiceToAssumeRole"
-            Effect: "Allow"
+          - Effect: Allow
+            Action: 'ssm:GetParameter*'
+            Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/apk/*'
+          - Effect: Allow
+            Action: 's3:ListBucket'
+            Resource: !GetAtt ApkS3Bucket.Arn
+          - Effect: Allow
             Action:
-              - "sts:AssumeRole"
-            Principal:
-              Service:
-                - "lambda.amazonaws.com"
-      Policies:
-        -
-          PolicyName: 'S3GetPutListObjectsForApk'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              -
-                Effect: Allow
-                Action:
-                  - 's3:GetObject'
-                  - 's3:PutObject'
-                  - 's3:ListBucket'
-                Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/*'
-        -
-          PolicyName: 'SSMParamForApk'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              -
-                Effect: Allow
-                Action: 'ssm:GetParameter*'
-                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/apk/*'
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Resource: !Sub '${ApkS3Bucket.Arn}/*'
+      Roles:
+        - !Ref ApkIndexFunctionRole
 
   ApkIndexFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub "apk-repository-${BucketName}"
+      FunctionName: !Sub '${AWS::StackName}-apk-repository'
+      Runtime: !Ref LambdaRuntime
+      Timeout: !Ref LambdaTimeout
       Handler: index.handler
-      Runtime: python3.7
       CodeUri: ./lambda
-      Timeout: 90
-      Role: !GetAtt ApkIndexFunctionRole.Arn
+      Layers:
+        - !Ref ApkIndexFunctionDependencies
       Events:
         S3FileListener:
           Type: S3
           Properties:
             Bucket: !Ref ApkS3Bucket
-            Events: s3:ObjectCreated:*
+            Events: 's3:ObjectCreated:*'
             Filter:
               S3Key:
                 Rules:
                   - Name: suffix
                     Value: '.apk'
+
