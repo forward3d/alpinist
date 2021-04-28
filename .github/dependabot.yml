@@ -1,0 +1,11 @@
+version: 2
+updates:
+- package-ecosystem: docker
+  directory: "/docker/apk-tools"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 99
+  reviewers:
+  - lloydpick
+  assignees:
+  - lloydpick
